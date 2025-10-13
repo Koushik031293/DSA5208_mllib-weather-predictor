@@ -30,19 +30,36 @@ python src/local_csv_to_parquet_new.py \
 **Schema:**
 root
  |-- STATION: integer (nullable = true)
+ 
  |-- DATE: timestamp (nullable = true)
+ 
  |-- year: integer (nullable = true)
+ 
  |-- month: integer (nullable = true)
+ 
  |-- day: integer (nullable = true)
+ 
  |-- hour: integer (nullable = true)
+ 
  |-- LATITUDE: double (nullable = true)
+ 
  |-- LONGITUDE: double (nullable = true)
+ 
  |-- ELEVATION: double (nullable = true)
+ 
  |-- WND_DIR_DEG: double (nullable = true)
+ 
  |-- WND_TYPE: string (nullable = true)
+ 
  |-- WND_SPD_MS: double (nullable = true)
+ 
  |-- CIG_HEIGHT_M: double (nullable = true)
+ 
  |-- VIS_DIST_M: double (nullable = true)
+ 
  |-- TMP_C: double (nullable = true)
+ 
  |-- DEW_C: double (nullable = true)
+ 
  |-- SLP_hPa: double (nullable = true)
+ 

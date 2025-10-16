@@ -192,8 +192,5 @@ avg_by_month.to_csv(out_dir / "avg_tmp_by_month.csv", index=False)
 print("EDA tables saved under:", out_dir.resolve())
 
 
-# In[ ]:
-
-
 
 

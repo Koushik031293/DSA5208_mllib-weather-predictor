@@ -7,41 +7,45 @@ import sys
 import argparse
 from glob import glob
 from datetime import datetime
-# --- First cell: force Java 11 inside the notebook process ---
-import os, subprocess, sys
-
-# Point JAVA_HOME to JDK 11 (Temurin 11) on macOS
-os.environ["JAVA_HOME"] = subprocess.check_output(
-    ["/usr/libexec/java_home", "-v", "11"], text=True
-).strip()
-
-# sanity check
-print("JAVA_HOME =", os.environ["JAVA_HOME"])
-print("java -version:")
-print(subprocess.check_output(["java", "-version"], stderr=subprocess.STDOUT, text=True))
 
 # ---------------------------
 # CLI
 # ---------------------------
 def parse_args():
     p = argparse.ArgumentParser(description="Train & evaluate RF on weather data with Spark.")
-    p.add_argument("--train", required=True, help="Path to TRAIN parquet")
-    p.add_argument("--test",  required=True, help="Path to TEST parquet")
+    p.add_argument("--train", required=True, help="Path to TRAIN parquet (folder or file)")
+    p.add_argument("--test",  required=True, help="Path to TEST parquet (folder or file)")
     p.add_argument("--outdir", default="results", help="Output directory for results (CSV/figures/MD)")
     p.add_argument("--models", default="models", help="Directory to save models")
     p.add_argument("--numTrees", type=int, default=80)
     p.add_argument("--maxDepth", type=int, default=10)
     p.add_argument("--subsample", type=float, default=0.7)
-    p.add_argument("--partitions", type=int, default=500, help="Repartition count for local run")
+    p.add_argument("--partitions", type=int, default=500, help="Shuffle/parallelism for local run")
     p.add_argument("--driver_mem", default="14g", help="Spark driver memory (local)")
     p.add_argument("--make_figs", action="store_true", help="Also generate PNG figures")
     p.add_argument("--make_summary", action="store_true", help="Also generate summary_rf.md")
+    p.add_argument("--use_java11", action="store_true",
+                   help="macOS: force JAVA_HOME to JDK 11 via /usr/libexec/java_home -v 11")
     return p.parse_args()
+
+# ---------------------------
+# Java (optional)
+# ---------------------------
+def maybe_set_java11(use_java11: bool):
+    if not use_java11:
+        return
+    try:
+        import subprocess
+        java_home = subprocess.check_output(["/usr/libexec/java_home", "-v", "11"], text=True).strip()
+        os.environ["JAVA_HOME"] = java_home
+        print("JAVA_HOME set to:", java_home)
+    except Exception as e:
+        print("[WARN] Could not set JAVA_HOME to JDK 11 automatically:", e)
 
 # ---------------------------
 # Spark setup
 # ---------------------------
-def init_spark(app_name: str, driver_mem: str):
+def init_spark(app_name: str, driver_mem: str, partitions: int):
     from pyspark.sql import SparkSession
     spark = (
         SparkSession.builder.appName(app_name)
@@ -51,14 +55,11 @@ def init_spark(app_name: str, driver_mem: str):
         .config("spark.kryoserializer.buffer.max", "512m")
         .config("spark.memory.fraction", "0.6")
         .config("spark.memory.storageFraction", "0.4")
-        .config("spark.sql.shuffle.partitions", "500")
-        .config("spark.default.parallelism", "500")
+        .config("spark.sql.shuffle.partitions", str(partitions))
+        .config("spark.default.parallelism", str(partitions))
         .getOrCreate()
     )
     return spark
-
-
-
 
 # ---------------------------
 # Helpers
@@ -78,18 +79,29 @@ def find_part_csv(folder: str) -> str:
     cands = sorted([p for p in glob(os.path.join(folder, "part-*.csv")) if not os.path.basename(p).startswith("._")])
     if cands:
         return cands[0]
-    # fallback: sometimes Spark writes without .csv extension
     cands = sorted([p for p in glob(os.path.join(folder, "part-*")) if not os.path.basename(p).startswith("._")])
     if cands:
         return cands[0]
     raise FileNotFoundError(f"No part file found in {folder}")
+
+def verify_path(pth: str, name: str):
+    # Accept both parquet file and directory-of-parquet
+    if not os.path.exists(pth):
+        raise FileNotFoundError(f"❌ {name} not found: {os.path.abspath(pth)}")
+    print(f"✅ Using {name}: {os.path.abspath(pth)}")
 
 # ---------------------------
 # Main pipeline
 # ---------------------------
 def main():
     args = parse_args()
-    spark = init_spark("ISD_2024_RF_local", args.driver_mem)
+    maybe_set_java11(args.use_java11)
+
+    # Validate paths early (cleaner than Spark traceback)
+    verify_path(args.train, "TRAIN")
+    verify_path(args.test,  "TEST")
+
+    spark = init_spark("ISD_2024_RF_local", args.driver_mem, args.partitions)
     sc = spark.sparkContext
     print(f"[INFO] Working dir: {os.path.abspath('.')}")
     print(f"[INFO] Spark UI: {sc.uiWebUrl}")
@@ -279,7 +291,7 @@ def main():
         except Exception as e:
             print(f"[WARN] Figure generation skipped: {e}")
 
-    # Optional: summary markdown
+    # Optional: summary markdown (with embedded figures)
     if args.make_summary:
         try:
             import pandas as pd
@@ -292,36 +304,42 @@ def main():
             top5 = imp_pd.head(5)
 
             md = []
-            md.append("# Random Forest Model – Results Summary\n")
-            md.append("## Performance\n")
+            md.append("# 🌡️ Random Forest Model – Results Summary\n\n")
+            md.append("## **Performance Metrics**\n")
             md.append("| Metric | Value |\n|:-------|------:|\n")
             md.append(f"| RMSE (°C) | **{rmse_v:.3f}** |\n")
             md.append(f"| MAE (°C)  | **{mae_v:.3f}** |\n")
             md.append(f"| R²        | **{r2_v:.3f}** |\n\n")
-            md.append("## Model Parameters\n")
+
+            md.append("## **Model Parameters**\n")
             md.append("| Parameter | Value |\n|:-----------|:------|\n")
             md.append(f"| numTrees | {args.numTrees} |\n")
             md.append(f"| maxDepth | {args.maxDepth} |\n")
             md.append(f"| subsamplingRate | {args.subsample} |\n")
             md.append(f'| featureSubsetStrategy | "sqrt" |\n')
             md.append("| imputation | Median |\n| scaling | Not applied |\n| seed | 42 |\n\n")
-            md.append("## Top 5 Feature Importances\n")
+
+            md.append("## **Top 5 Feature Importances**\n")
             md.append("| Rank | Feature | Importance |\n|:----:|:---------|-----------:|\n")
             for i, r in top5.reset_index(drop=True).iterrows():
                 md.append(f"| {i+1} | {r['feature']} | {r['importance']:.4f} |\n")
-            md.append("\n## Figures\n")
-            md.append("| Figure | File Path |\n|:-------|:-----------|\n")
-            md.append("| Predicted vs Actual | `results/figures/rf_pred_vs_actual.png` |\n")
-            md.append("| Residual Histogram  | `results/figures/rf_residual_hist.png` |\n")
-            md.append("| Feature Importance  | `results/figures/rf_feature_importance.png` |\n")
-            md.append("| RMSE by Hour        | `results/figures/rf_rmse_by_hour.png` |\n")
-            md.append("| RMSE by Month       | `results/figures/rf_rmse_by_month.png` |\n\n")
+            md.append("\n")
+
+            # Embedded figures
+            FIG_REL = "results/figures"
+            md.append("## **Visual Results**\n\n")
+            md.append(f"**Predicted vs Actual**\n\n![Predicted vs Actual]({FIG_REL}/rf_pred_vs_actual.png)\n\n")
+            md.append(f"**Residual Distribution**\n\n![Residual Histogram]({FIG_REL}/rf_residual_hist.png)\n\n")
+            md.append(f"**Feature Importance**\n\n![Feature Importance]({FIG_REL}/rf_feature_importance.png)\n\n")
+            md.append(f"**RMSE by Hour**\n\n![RMSE by Hour]({FIG_REL}/rf_rmse_by_hour.png)\n\n")
+            md.append(f"**RMSE by Month**\n\n![RMSE by Month]({FIG_REL}/rf_rmse_by_month.png)\n\n")
+
             md.append(f"_Generated: {datetime.now():%Y-%m-%d %H:%M}_\n")
 
             OUT_MD = os.path.join(RESULTS_DIR, "summary_rf.md")
             with open(OUT_MD, "w") as f:
                 f.writelines(md)
-            print(f"[INFO] Summary markdown saved to {OUT_MD}")
+            print(f"[INFO] Markdown summary saved to {OUT_MD}")
         except Exception as e:
             print(f"[WARN] Summary generation skipped: {e}")
 

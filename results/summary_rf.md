@@ -1,12 +1,13 @@
-# Random Forest Model – Results Summary
-## Performance
+# 🌡️ Random Forest Model – Results Summary
+
+## **Performance Metrics**
 | Metric | Value |
 |:-------|------:|
 | RMSE (°C) | **3.722** |
 | MAE (°C)  | **2.689** |
 | R²        | **0.912** |
 
-## Model Parameters
+## **Model Parameters**
 | Parameter | Value |
 |:-----------|:------|
 | numTrees | 80 |
@@ -17,7 +18,7 @@
 | scaling | Not applied |
 | seed | 42 |
 
-## Top 5 Feature Importances
+## **Top 5 Feature Importances**
 | Rank | Feature | Importance |
 |:----:|:---------|-----------:|
 | 1 | DEW_C | 0.5805 |
@@ -26,13 +27,26 @@
 | 4 | CIG_HEIGHT_M | 0.0436 |
 | 5 | SLP_hPa | 0.0432 |
 
-## Figures
-| Figure | File Path |
-|:-------|:-----------|
-| Predicted vs Actual | `results/figures/rf_pred_vs_actual.png` |
-| Residual Histogram  | `results/figures/rf_residual_hist.png` |
-| Feature Importance  | `results/figures/rf_feature_importance.png` |
-| RMSE by Hour        | `results/figures/rf_rmse_by_hour.png` |
-| RMSE by Month       | `results/figures/rf_rmse_by_month.png` |
+## **Visual Results**
 
-_Generated: 2025-10-16 13:32_
+**Predicted vs Actual**
+
+![Predicted vs Actual](results/figures/rf_pred_vs_actual.png)
+
+**Residual Distribution**
+
+![Residual Histogram](results/figures/rf_residual_hist.png)
+
+**Feature Importance**
+
+![Feature Importance](results/figures/rf_feature_importance.png)
+
+**RMSE by Hour**
+
+![RMSE by Hour](results/figures/rf_rmse_by_hour.png)
+
+**RMSE by Month**
+
+![RMSE by Month](results/figures/rf_rmse_by_month.png)
+
+_Generated: 2025-10-16 14:12_

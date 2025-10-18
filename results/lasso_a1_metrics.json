@@ -1,0 +1,27 @@
+{
+    "metrics": {
+        "timestamp": "2025-10-15 02:26:46",
+        "model": "Lasso (alpha=1.0)",
+        "elasticNetParam": 1.0,
+        "best_regParam": 0.001,
+        "rmse": 5.3225,
+        "mae": 3.7747,
+        "r2": 0.8205,
+        "intercept": 13.175161852671911
+    },
+    "coefficients": {
+        "DEW_C": 10.956537546192376,
+        "SLP_hPa": -0.3982603602549221,
+        "WND_SPD_MS": 0.6100206650017179,
+        "VIS_DIST_M": 0.4756134918844644,
+        "CIG_HEIGHT_M": 2.448737450387363,
+        "LATITUDE": -0.9236748848898906,
+        "LONGITUDE": -0.10746333155158698,
+        "ELEVATION": 1.4522104708401102
+    },
+    "coef_diag": {
+        "nonzero": 8,
+        "l1_norm": 17.372518201002432,
+        "l2_norm": 11.391778339408516
+    }
+}

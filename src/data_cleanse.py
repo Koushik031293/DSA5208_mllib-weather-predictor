@@ -325,7 +325,7 @@ df.printSchema()
 
 
 #output cleansed data to new parquet file
-output_path = "data/cleansed/2024_cleansed_test.parquet"
+output_path = "data/cleansed/2024_cleansed.parquet"
 
 # Coalesce(1) ensures a single output file
 df.coalesce(1).write.mode("overwrite").parquet(output_path)
@@ -337,8 +337,8 @@ print(f"Cleansed dataset written to: {output_path}")
 #split cleansed data into 70% training and 30% data parquet
 train_df, test_df = df.randomSplit([0.7, 0.3], seed=42)
 
-train_output = "data/train_2024.parquet_test"
-test_output  = "data/test_2024.parquet_test"
+train_output = "data/train_2024.parquet"
+test_output  = "data/test_2024.parquet"
 
 (train_df
     .coalesce(1)  # merge all partitions into one file

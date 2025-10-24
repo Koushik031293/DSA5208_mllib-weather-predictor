@@ -1,0 +1,184 @@
+
+
+import csv
+from typing import Dict, Tuple, List
+
+try:
+    import pulp as pl
+except ImportError:
+    raise SystemExit("PuLP not found. Install with:  pip install pulp")
+
+# -----------------------------
+# Data (from assignment)
+# -----------------------------
+PLANTS = ["Steel", "Cement", "Petro"]
+METHODS = ["BF", "EP", "MC"]
+
+COAL: Dict[str, float] = {"Steel": 50.0, "Cement": 170.0, "Petro": 200.0}   # ton/yr
+EF: Dict[str, float]   = {"Steel": 40.0, "Cement": 70.0, "Petro": 60.0}     # kg/ton
+EFF: Dict[str, float]  = {"BF": 0.98, "EP": 0.90, "MC": 0.70}               # removal efficiency
+COST: Dict[str, Dict[str, float]] = {
+    "Steel":  {"BF": 30.0, "EP": 17.0, "MC": 10.0},
+    "Cement": {"BF": 40.0, "EP": 17.0, "MC": 10.0},
+    "Petro":  {"BF": 50.0, "EP": 15.0, "MC": 10.0},
+}
+TARGET_FRAC = 0.75  # >= 75% removal
+
+# -----------------------------
+# Helpers
+# -----------------------------
+def total_uncontrolled() -> float:
+    return sum(COAL[i] * EF[i] for i in PLANTS)
+
+def removed_kg(x: Dict[Tuple[str, str], float]) -> float:
+    return sum(EFF[j] * EF[i] * x.get((i, j), 0.0) for i in PLANTS for j in METHODS)
+
+def total_cost(x: Dict[Tuple[str, str], float]) -> float:
+    return sum(COST[i][j] * x.get((i, j), 0.0) for i in PLANTS for j in METHODS)
+
+def fmt(n: float, d=3) -> str:
+    return f"{n:.{d}f}"
+
+def make_rows_x(x: Dict[Tuple[str, str], float]) -> List[List[str]]:
+    return [[i] + [fmt(x.get((i, j), 0.0), 3) for j in METHODS] for i in PLANTS]
+
+def make_rows_y(y: Dict[Tuple[str, str], int]) -> List[List[str]]:
+    return [[i] + [str(y.get((i, j), 0)) for j in METHODS] for i in PLANTS]
+
+def write_csv(path: str, header: List[str], rows: List[List[str]]):
+    with open(path, "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(header); w.writerows(rows)
+
+def md_table(header: List[str], rows: List[List[str]]) -> str:
+    h = "| " + " | ".join(header) + " |"
+    s = "| " + " | ".join(["---"] * len(header)) + " |"
+    b = "\n".join("| " + " | ".join(r) + " |" for r in rows)
+    return "\n".join([h, s, b])
+
+# -----------------------------
+# Q2 — LP (from Q1; splittable)
+# -----------------------------
+def solve_q2_lp():
+    m = pl.LpProblem("Q2_LP", pl.LpMinimize)
+    x = pl.LpVariable.dicts("x", [(i, j) for i in PLANTS for j in METHODS], lowBound=0, cat=pl.LpContinuous)
+
+    # Objective
+    m += pl.lpSum(COST[i][j] * x[(i, j)] for i in PLANTS for j in METHODS)
+
+    # Per-plant availability (<= all coal can be left untreated if optimal)
+    for i in PLANTS:
+        m += pl.lpSum(x[(i, j)] for j in METHODS) <= COAL[i]
+
+    # System removal target
+    m += pl.lpSum(EFF[j]*EF[i]*x[(i, j)] for i in PLANTS for j in METHODS) >= TARGET_FRAC * total_uncontrolled()
+
+    m.solve(pl.PULP_CBC_CMD(msg=False))
+    x_sol = {(i, j): (pl.value(x[(i, j)]) or 0.0) for i in PLANTS for j in METHODS}
+    return x_sol
+
+# -----------------------------
+# Q4 — MIP (from Q3; ≤1 method per plant)
+# -----------------------------
+def solve_q4_mip():
+    m = pl.LpProblem("Q4_MIP", pl.LpMinimize)
+    x = pl.LpVariable.dicts("x", [(i, j) for i in PLANTS for j in METHODS], lowBound=0, cat=pl.LpContinuous)
+    y = pl.LpVariable.dicts("y", [(i, j) for i in PLANTS for j in METHODS], lowBound=0, upBound=1, cat=pl.LpBinary)
+
+    # Objective
+    m += pl.lpSum(COST[i][j] * x[(i, j)] for i in PLANTS for j in METHODS)
+
+    # Link x to y; at most one method per plant; availability
+    for i in PLANTS:
+        for j in METHODS:
+            m += x[(i, j)] <= COAL[i] * y[(i, j)]
+        m += pl.lpSum(y[(i, j)] for j in METHODS) <= 1
+        m += pl.lpSum(x[(i, j)] for j in METHODS) <= COAL[i]
+
+    # System removal target
+    m += pl.lpSum(EFF[j]*EF[i]*x[(i, j)] for i in PLANTS for j in METHODS) >= TARGET_FRAC * total_uncontrolled()
+
+    m.solve(pl.PULP_CBC_CMD(msg=False))
+    x_sol = {(i, j): (pl.value(x[(i, j)]) or 0.0) for i in PLANTS for j in METHODS}
+    y_sol = {(i, j): int(round(pl.value(y[(i, j)]) or 0.0)) for i in PLANTS for j in METHODS}
+    return x_sol, y_sol
+
+# -----------------------------
+# Main (solve both + print + save)
+# -----------------------------
+def main():
+    total_unctl = total_uncontrolled()
+    target = TARGET_FRAC * total_unctl
+
+    # ---- Q2 (LP from Q1)
+    x_lp = solve_q2_lp()
+    removed_lp = removed_kg(x_lp)
+    cost_lp = total_cost(x_lp)
+    pct_lp = 100 * removed_lp / total_unctl
+
+    print("\n============================")
+    print("Question 2 — LP (from Q1; plants MAY split)")
+    print("============================")
+    rows_lp = make_rows_x(x_lp)
+    for r in rows_lp:
+        print("{:<8} BF={:>8}  EP={:>8}  MC={:>8}".format(r[0], r[1], r[2], r[3]))
+    print(f"Uncontrolled (kg/yr): {total_unctl:,.0f}")
+    print(f"Target (kg/yr):       {target:,.0f}")
+    print(f"Removed (kg/yr):      {removed_lp:,.0f}")
+    print(f"Percent removed:      {pct_lp:.2f}%")
+    print(f"Annual cost (USD):    {cost_lp:,.2f}")
+
+    write_csv("q2_lp_allocation.csv", ["Plant"] + METHODS, rows_lp)
+    write_csv("q2_lp_summary.csv", ["metric", "value"], [
+        ["uncontrolled_kg", f"{total_unctl:.3f}"],
+        ["target_kg", f"{target:.3f}"],
+        ["removed_kg", f"{removed_lp:.3f}"],
+        ["percent_removed", f"{pct_lp:.4f}"],
+        ["total_cost_usd", f"{cost_lp:.2f}"],
+    ])
+
+    # ---- Q4 (MIP from Q3)
+    x_mip, y_mip = solve_q4_mip()
+    removed_mip = removed_kg(x_mip)
+    cost_mip = total_cost(x_mip)
+    pct_mip = 100 * removed_mip / total_unctl
+
+    print("\n============================")
+    print("Question 4 — MIP (from Q3; ≤1 method per plant)")
+    print("============================")
+    rows_mip_x = make_rows_x(x_mip)
+    for r in rows_mip_x:
+        chosen = next((j for j in METHODS if y_mip[(r[0], j)] == 1), "-")
+        print("{:<8} BF={:>8}  EP={:>8}  MC={:>8}   | chosen: {}".format(r[0], r[1], r[2], r[3], chosen))
+
+    print("\nChosen methods y_ij (0/1):")
+    rows_mip_y = make_rows_y(y_mip)
+    for r in rows_mip_y:
+        print("{:<8} BF={}  EP={}  MC={}".format(r[0], r[1], r[2], r[3]))
+
+    print("\nSummary:")
+    print(f"Uncontrolled (kg/yr): {total_unctl:,.0f}")
+    print(f"Target (kg/yr):       {target:,.0f}")
+    print(f"Removed (kg/yr):      {removed_mip:,.0f}")
+    print(f"Percent removed:      {pct_mip:.2f}%")
+    print(f"Annual cost (USD):    {cost_mip:,.2f}")
+
+    write_csv("q4_mip_allocation.csv", ["Plant"] + METHODS, rows_mip_x)
+    write_csv("q4_mip_choice.csv", ["Plant", "Method", "Chosen(0/1)"],
+              [[i, j, y_mip[(i, j)]] for i in PLANTS for j in METHODS])
+    write_csv("q4_mip_summary.csv", ["metric", "value"], [
+        ["uncontrolled_kg", f"{total_unctl:.3f}"],
+        ["target_kg", f"{target:.3f}"],
+        ["removed_kg", f"{removed_mip:.3f}"],
+        ["percent_removed", f"{pct_mip:.4f}"],
+        ["total_cost_usd", f"{cost_mip:.2f}"],
+    ])
+
+
+    print("\nArtifacts written:")
+    print("  q2_lp_allocation.csv, q2_lp_summary.csv")
+    print("  q4_mip_allocation.csv, q4_mip_choice.csv, q4_mip_summary.csv")
+    print("  q2_q4_results.md")
+
+if __name__ == "__main__":
+    main()

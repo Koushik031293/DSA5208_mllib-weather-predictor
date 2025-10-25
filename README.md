@@ -88,22 +88,51 @@ gcloud dataproc batches submit pyspark gs://dsa5208-mllib-weather-predict/src/da
 
 ### Linear Regression
 ```bash
-gcloud dataproc batches submit pyspark gs://dsa5208-mllib-weather-predict/src/base_linearReg.py   --region=asia-southeast1 --version=2.3   --deps-bucket=gs://dsa5208-mllib-weather-predict   --properties="spark.sql.shuffle.partitions=200,spark.default.parallelism=200"   --   --input gs://dsa5208-mllib-weather-predict/data/train_2024.parquet   --input gs://dsa5208-mllib-weather-predict/data/test_2024.parquet
+gcloud dataproc batches submit pyspark gs://dsa5208-mllib-weather-predict/src/base_linearReg.py
+--region=asia-southeast1 --version=2.3   --deps-bucket=gs://dsa5208-mllib-weather-predict
+--properties="spark.sql.shuffle.partitions=200,spark.default.parallelism=200"
+--
+--input gs://dsa5208-mllib-weather-predict/data/train_2024.parquet
+--input gs://dsa5208-mllib-weather-predict/data/test_2024.parquet
 ```
 
 ### Ridge / Lasso Regression
 ```bash
-gcloud dataproc batches submit pyspark gs://dsa5208-mllib-weather-predict/src/Ridge_Lasso.py   --region=asia-southeast1 --version=2.3   --deps-bucket=gs://dsa5208-mllib-weather-predict   --properties="spark.sql.shuffle.partitions=200,spark.default.parallelism=200"   --   --input gs://dsa5208-mllib-weather-predict/data/train_2024.parquet   --input gs://dsa5208-mllib-weather-predict/data/test_2024.parquet
+gcloud dataproc batches submit pyspark gs://dsa5208-mllib-weather-predict/src/Ridge_Lasso.py
+ --region=asia-southeast1 --version=2.3
+ --deps-bucket=gs://dsa5208-mllib-weather-predict
+ --properties="spark.sql.shuffle.partitions=200,spark.default.parallelism=200"
+ --
+ --input gs://dsa5208-mllib-weather-predict/data/train_2024.parquet
+ --input gs://dsa5208-mllib-weather-predict/data/test_2024.parquet
 ```
 
 ### Random Forest Regression
 ```bash
-gcloud dataproc batches submit pyspark gs://dsa5208-mllib-weather-predict/src/rf_train_eval_all_cloud.py   --region=asia-southeast1 --version=2.3   --batch="rf-$(date +%Y%m%d-%H%M%S)"   --deps-bucket=gs://dsa5208-mllib-weather-predict   --ttl=1d   --properties="spark.driver.memory=20g,spark.driver.maxResultSize=0"   --   --train gs://dsa5208-mllib-weather-predict/data/train_2024.parquet   --test  gs://dsa5208-mllib-weather-predict/data/test_2024.parquet   --numTrees 120 --maxDepth 12 --subsample 0.8 --partitions 300 --driver_mem 20g --make_figs
+gcloud dataproc batches submit pyspark gs://dsa5208-mllib-weather-predict/src/rf_train_eval_all_cloud.py
+--region=asia-southeast1 --version=2.3   --batch="rf-$(date +%Y%m%d-%H%M%S)"
+--deps-bucket=gs://dsa5208-mllib-weather-predict
+--ttl=1d
+--properties="spark.driver.memory=20g,spark.driver.maxResultSize=0"
+--
+--train gs://dsa5208-mllib-weather-predict/data/train_2024.parquet
+--test  gs://dsa5208-mllib-weather-predict/data/test_2024.parquet
+--numTrees 120 --maxDepth 12 --subsample 0.8 --partitions 300 --driver_mem 20g --make_figs
 ```
 
 ### XGBoost Regression
 ```bash
-gcloud dataproc batches submit pyspark gs://dsa5208-mllib-weather-predict/src/XGBoost.py   --region=asia-southeast1 --version=2.3   --deps-bucket=gs://dsa5208-mllib-weather-predict   --ttl=1d   --properties="spark.executorEnv.USE_GCS=1,spark.executorEnv.GCS_BUCKET=dsa5208-mllib-weather-predict"   --   --train gs://dsa5208-mllib-weather-predict/data/train_2024.parquet   --test  gs://dsa5208-mllib-weather-predict/data/test_2024.parquet   --ycol TMP_C   --outdir gs://dsa5208-mllib-weather-predict/results_xgb_full   --n_iter 20 --cv 3 --threads 8 --max_bins 256 --max_cat 128 --no_plots
+gcloud dataproc batches submit pyspark gs://dsa5208-mllib-weather-predict/src/XGBoost.py
+--region=asia-southeast1
+--version=2.3
+--deps-bucket=gs://dsa5208-mllib-weather-predict
+--ttl=1d   --properties="spark.executorEnv.USE_GCS=1,spark.executorEnv.GCS_BUCKET=dsa5208-mllib-weather-predict"
+--
+--train gs://dsa5208-mllib-weather-predict/data/train_2024.parquet
+--test  gs://dsa5208-mllib-weather-predict/data/test_2024.parquet
+--ycol TMP_C
+--outdir gs://dsa5208-mllib-weather-predict/results_xgb_full
+--n_iter 20 --cv 3 --threads 8 --max_bins 256 --max_cat 128 --no_plots
 ```
 
 ---
@@ -113,9 +142,22 @@ gcloud dataproc batches submit pyspark gs://dsa5208-mllib-weather-predict/src/XG
 Once model outputs are stored in GCS or local results, generate Markdown + PDF reports:
 
 ```bash
-python src/model_report_to_pdf.py   --results_dir results_cloud/rf_results   --model_name "Random Forest Regressor (Weather TMP_C)"   --target_col TMP_C
+python src/model_report_to_pdf.py
+--results_dir results_cloud/rf_results
+--model_name "Random Forest Regressor (Weather TMP_C)"
+--target_col TMP_C
 
-python src/model_report_to_pdf.py   --results_dir results_cloud/xgb_results   --model_name "XGBoost Regressor (Weather TMP_C)"   --target_col TMP_C
+python src/model_report_to_pdf.py
+--results_dir results_cloud/xgb_results
+--model_name "XGBoost Regressor (Weather TMP_C)"
+--target_col TMP_C
+
+python src/model_report_to_pdf.py \
+  --results_dir results_cloud/linear/lasso \
+  --model_name "Elastic Net Family (Weather TMP_C)" \
+  --target_col TMP_C
+
+
 ```
 
 ---

@@ -81,6 +81,14 @@ gsutil -m cp -r data/ gs://dsa5208-mllib-weather-predict/data/
 
 Each stage is executed via Dataproc Batches.
 
+### 🧩 Pre-Step: Merge Local CSV Files into a Compacted Parquet
+Before submitting the Data Cleanse job, merge all raw CSV files into a single Parquet file.
+This improves read performance in Spark and ensures consistent schema across files.
+
+```bash
+python src/local_csv_to_parquet_new.py "data/raw/*.csv" "data/compacted/2024.parquet"
+```
+
 ### Data Cleanse
 ```bash
 gcloud dataproc batches submit pyspark gs://dsa5208-mllib-weather-predict/src/data_cleanse.py   --region=asia-southeast1 --version=2.3   --deps-bucket=gs://dsa5208-mllib-weather-predict   --properties="spark.sql.shuffle.partitions=200,spark.default.parallelism=200"   --   --input gs://dsa5208-mllib-weather-predict/data/compacted/2024.parquet

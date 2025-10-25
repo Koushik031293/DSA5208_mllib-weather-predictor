@@ -84,8 +84,9 @@ Each stage is executed via Dataproc Batches.
 ### 🧩 Pre-Step: Merge Local CSV Files into a Compacted Parquet
 Before submitting the Data Cleanse job, merge all raw CSV files into a single Parquet file.
 This improves read performance in Spark and ensures consistent schema across files.
-
+```
 python src/local_csv_to_parquet_new.py "data/raw/*.csv" "data/compacted/2024.parquet"
+```
 
 ### Data Cleanse
 ```bash

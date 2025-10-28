@@ -1,0 +1,25 @@
+{
+    "base": {
+        "model": "XGBoost_Base",
+        "RMSE": 2.1580679044177744,
+        "MAE": 1.5673176050186157,
+        "R2": 0.9705079793930054
+    },
+    "best": {
+        "model": "XGBoost_Optimised",
+        "RMSE": 1.527428197843241,
+        "MAE": 1.108031153678894,
+        "R2": 0.985226035118103
+    },
+    "best_params": {
+        "n_estimators": 800,
+        "learning_rate": 0.23062766409890026,
+        "max_depth": 12,
+        "min_child_weight": 3.123864277740602,
+        "subsample": 0.6280341613806619,
+        "colsample_bytree": 0.5202167947692157,
+        "reg_alpha": 0.7106628896857874,
+        "reg_lambda": 0.22178164162366265,
+        "gamma": 0.8786730037315402
+    }
+}

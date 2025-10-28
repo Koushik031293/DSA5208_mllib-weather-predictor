@@ -1,0 +1,2 @@
+timestamp,model,elasticNetParam,best_regParam,rmse,mae,r2,intercept
+2025-10-22 09:56:12,Lasso (alpha=1.0),1.0,0.001,5.3225,3.7744,0.8206,13.176612076400788

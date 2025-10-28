@@ -1,0 +1,2 @@
+timestamp,model,elasticNetParam,best_regParam,rmse,mae,r2,intercept
+2025-10-22 09:51:26,Ridge (alpha=0.0),0.0,0.01,5.3225,3.7748,0.8206,13.176612076400788

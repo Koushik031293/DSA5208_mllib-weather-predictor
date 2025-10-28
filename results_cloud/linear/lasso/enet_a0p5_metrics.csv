@@ -1,0 +1,2 @@
+timestamp,model,elasticNetParam,best_regParam,rmse,mae,r2,intercept
+2025-10-22 09:54:08,Enet (alpha=0.5),0.5,0.003,5.3225,3.7745,0.8206,13.176612076400774

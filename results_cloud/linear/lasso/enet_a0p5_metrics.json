@@ -1,0 +1,27 @@
+{
+    "metrics": {
+        "timestamp": "2025-10-22 09:54:08",
+        "model": "Enet (alpha=0.5)",
+        "elasticNetParam": 0.5,
+        "best_regParam": 0.003,
+        "rmse": 5.3225,
+        "mae": 3.7745,
+        "r2": 0.8206,
+        "intercept": 13.176612076400774
+    },
+    "coefficients": {
+        "DEW_C": 10.95235210660757,
+        "SLP_hPa": -0.3987261522676251,
+        "WND_SPD_MS": 0.6082456068503111,
+        "VIS_DIST_M": 0.4751012220553494,
+        "CIG_HEIGHT_M": 2.4480790556808256,
+        "LATITUDE": -0.9247351646148444,
+        "LONGITUDE": -0.10685835799444315,
+        "ELEVATION": 1.4526065183315604
+    },
+    "coef_diag": {
+        "nonzero": 8,
+        "l1_norm": 17.36670418440253,
+        "l2_norm": 11.387642148152338
+    }
+}

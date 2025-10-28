@@ -1,0 +1,2 @@
+timestamp,model,rmse,mae,r2,intercept
+2025-10-22 09:36:35,Baseline Linear Regression,5.3225,3.7743,0.8206,48.696390977667456
